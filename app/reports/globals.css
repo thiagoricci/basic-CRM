@@ -1,0 +1,60 @@
+@media print {
+  /* Hide non-essential elements */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Optimize layout for printing */
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Ensure charts are visible */
+  .recharts-wrapper {
+    page-break-inside: avoid;
+  }
+
+  /* Optimize tables for printing */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  td, th {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* Hide background colors for better contrast */
+  .bg-muted {
+    background-color: transparent !important;
+  }
+
+  /* Ensure text is readable */
+  body {
+    font-size: 12pt;
+    color: #000;
+  }
+
+  /* Optimize spacing */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+
+  /* Hide tabs and filters in print */
+  [role="tablist"],
+  .date-range-filter {
+    display: none !important;
+  }
+
+  /* Show all tab content when printing */
+  [role="tabpanel"] {
+    display: block !important;
+    page-break-after: always;
+  }
+}

@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Contact {
+  id          String     @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String     @unique
+  phoneNumber String?    @unique
+  status      String     @default("lead")
+  jobTitle    String?
+  companyId   String?
+  company     Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  activities  Activity[]
+  tasks       Task[]
+  deals       Deal[]
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([phoneNumber])
+  @@index([companyId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  type        String
+  subject     String
+  description String?
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([contactId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  priority    String    @default("medium")
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  contactId   String
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([contactId])
+  @@index([dueDate])
+  @@index([completed])
+  @@index([priority])
+}
+
+model Deal {
+  id                String    @id @default(uuid())
+  name              String
+  value             Float
+  stage             String    @default("lead")
+  expectedCloseDate DateTime
+  actualCloseDate   DateTime?
+  status            String    @default("open")
+  probability       Int?      @default(0)
+  description       String?
+  contactId         String
+  contact           Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  companyId         String?
+  company           Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  stageHistory      DealStageHistory[]
+
+  @@index([contactId])
+  @@index([stage])
+  @@index([status])
+  @@index([expectedCloseDate])
+  @@index([actualCloseDate])
+  @@index([companyId])
+}
+
+model DealStageHistory {
+  id        String   @id @default(uuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  fromStage String?
+  toStage   String
+  changedAt DateTime @default(now())
+
+  @@index([dealId])
+  @@index([changedAt])
+  @@index([toStage])
+}
+
+model Company {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  industry      String?
+  website       String?
+  phone         String?
+  address       String?
+  employeeCount Int?
+  revenue       Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  contacts      Contact[]
+  deals         Deal[]
+
+  @@index([name])
+  @@index([industry])
+  @@index([createdAt])
+}
