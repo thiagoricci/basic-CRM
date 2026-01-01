@@ -105,28 +105,6 @@
 
 ---
 
-## 🚀 Demo
-
-### Screenshots
-
-#### Dashboard
-
-![Dashboard](docs/screenshots/dashboard.png)
-
-#### Contact Management
-
-![Contacts](docs/screenshots/contacts.png)
-
-#### Deal Kanban Board
-
-![Deals](docs/screenshots/deals.png)
-
-#### Reports & Analytics
-
-![Reports](docs/screenshots/reports.png)
-
----
-
 ## 🛠 Tech Stack
 
 ### Frontend
