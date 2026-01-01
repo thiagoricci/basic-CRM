@@ -100,7 +100,6 @@
 - **Intentional Minimalism**: Bespoke, non-generic design philosophy
 - **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
 - **Modern UI**: Built with shadcn/ui components
-- **Smooth Animations**: Framer Motion for micro-interactions
 - **Accessibility**: WCAG AA compliant with keyboard navigation
 - **Dark Mode Ready**: Theme support for future implementation
 
@@ -138,7 +137,6 @@
 - **Styling**: [Tailwind CSS 3.4+](https://tailwindcss.com/)
 - **Charts**: [Recharts 2.10+](https://recharts.org/)
 - **Forms**: [React Hook Form 7.48+](https://react-hook-form.com/) + [Zod 3.22+](https://zod.dev/)
-- **Animations**: [Framer Motion 10.16+](https://www.framer.com/motion/)
 - **Drag & Drop**: [@hello-pangea/dnd 16.6+](https://github.com/hello-pangea/dnd)
 - **Data Fetching**: [SWR 2.3+](https://swr.vercel.app/)
 - **Date Handling**: [date-fns 4.1+](https://date-fns.org/)
@@ -265,6 +263,7 @@ basic-CRM/
 │   │   ├── activities/page.tsx   # Activities API docs
 │   │   ├── tasks/page.tsx        # Tasks API docs
 │   │   ├── deals/page.tsx        # Deals API docs
+│   │   ├── companies/page.tsx     # Companies API docs
 │   │   ├── dashboard/page.tsx    # Dashboard API docs
 │   │   ├── integration/page.tsx  # Integration guide
 │   │   ├── security/page.tsx     # Security best practices
