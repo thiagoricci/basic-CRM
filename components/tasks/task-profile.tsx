@@ -88,6 +88,7 @@ export function TaskProfile({ task, onUpdate, onDelete }: TaskProfileProps) {
               dueDate: typeof task.dueDate === 'string' ? task.dueDate : task.dueDate.toISOString(),
               priority: task.priority,
               contactId: task.contactId,
+              userId: task.userId ?? undefined,
             }}
             onSubmit={handleUpdate}
             onCancel={() => setIsEditing(false)}

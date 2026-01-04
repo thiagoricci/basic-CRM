@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ContactSelector } from '@/components/contacts/contact-selector';
+import { UserSelector } from '@/components/users/user-selector';
 import { activitySchema, type ActivityInput } from '@/lib/validations';
 
 interface ActivityFormProps {
@@ -36,16 +37,49 @@ export function ActivityForm({
   onCancel,
 }: ActivityFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const [userDisabled, setUserDisabled] = useState(false);
 
-  const form = useForm<ActivityInput>({
-    resolver: zodResolver(activitySchema),
-    defaultValues: {
-      type: initialData?.type || 'note',
-      subject: initialData?.subject || '',
-      description: initialData?.description || '',
-      contactId: initialData?.contactId || contactId || '',
-    },
-  });
+const form = useForm<ActivityInput>({
+  resolver: zodResolver(activitySchema),
+  defaultValues: {
+    type: initialData?.type || 'note',
+    subject: initialData?.subject || '',
+    description: initialData?.description || '',
+    contactId: initialData?.contactId || contactId || '',
+    userId: initialData?.userId || undefined,
+  },
+});
+
+// Update form when initialData changes (e.g., when switching to edit mode)
+useEffect(() => {
+  if (initialData) {
+    form.reset({
+      type: initialData.type,
+      subject: initialData.subject,
+      description: initialData.description || '',
+      contactId: initialData.contactId,
+      userId: initialData.userId ?? undefined,
+    });
+    
+    // Disable user field if contact has a user assigned
+    if (initialData.contactId && !initialData.userId) {
+      setUserDisabled(true);
+    } else {
+      setUserDisabled(false);
+    }
+  }
+}, [initialData, form]);
+
+// Handle contact selection to auto-fill user
+const handleContactSelect = (contact: any) => {
+  // Auto-fill user if contact has one
+  if (contact.userId) {
+    form.setValue('userId', contact.userId);
+    setUserDisabled(true);
+  } else {
+    setUserDisabled(false);
+  }
+};
 
   const handleSubmit = async (data: ActivityInput) => {
     setError(null);
@@ -130,11 +164,27 @@ export function ActivityForm({
           <ContactSelector
             value={form.watch('contactId')}
             onChange={(contactId) => form.setValue('contactId', contactId)}
+            onContactSelect={handleContactSelect}
             disabled={isSubmitting}
             error={form.formState.errors.contactId?.message}
           />
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="userId">Assigned To</Label>
+        <UserSelector
+          value={form.watch('userId') || undefined}
+          onChange={(value) => form.setValue('userId', value as any)}
+          disabled={userDisabled}
+          placeholder={userDisabled ? 'Auto-filled from contact' : 'Assign to a user (optional)'}
+        />
+        {form.formState.errors.userId && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.userId.message}
+          </p>
+        )}
+      </div>
 
       {error && (
         <div className="rounded-lg bg-destructive/10 p-4 text-destructive">

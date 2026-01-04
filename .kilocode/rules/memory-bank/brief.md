@@ -110,7 +110,7 @@ A lightweight, multi-user Customer Relationship Management (CRM) system designed
 
 ## Current Phase
 
-MVP + Enhanced Features - Complete contact, activity, task, and deal management without authentication. Multi-user access planned with authentication and role-based permissions in future releases.
+MVP + Enhanced Features + Authentication (Phases 1-4) - Complete contact, activity, task, deal, and company management with full authentication, authorization, and role-based access control (RBAC). Phase 5 (Social Login & Enhanced Security) planned for future releases.
 
 ## Significance
 

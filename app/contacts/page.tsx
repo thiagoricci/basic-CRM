@@ -17,7 +17,7 @@ export default function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'lead' | 'customer'>('all');
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [sortField, setSortField] = useState<'name' | 'email' | 'phone' | 'status' | 'date'>('date');
+  const [sortField, setSortField] = useState<'name' | 'email' | 'phone' | 'status' | 'date' | 'assignedTo'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -77,6 +77,9 @@ export default function ContactsPage() {
           break;
         case 'date':
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'assignedTo':
+          comparison = (a.user?.name || '').localeCompare(b.user?.name || '');
           break;
       }
 
@@ -176,7 +179,7 @@ export default function ContactsPage() {
           onSelectionChange={setSelectedContacts}
           sortField={sortField}
           sortDirection={sortDirection}
-          onSortChange={(field: 'name' | 'email' | 'phone' | 'status' | 'date') => {
+          onSortChange={(field: 'name' | 'email' | 'phone' | 'status' | 'date' | 'assignedTo') => {
             if (sortField === field) {
               setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
             } else {

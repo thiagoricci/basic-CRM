@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { dealSchema } from '@/lib/validations';
+import { requirePermission, getUserFilter, getCurrentUserId } from '@/lib/authorization';
 
 // GET /api/deals - List all deals with filtering
 export async function GET(request: NextRequest) {
   try {
+    // Check read permission
+    const permissionCheck = await requirePermission('deal', 'read');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const contactId = searchParams.get('contactId');
     const stage = searchParams.get('stage');
@@ -14,8 +24,12 @@ export async function GET(request: NextRequest) {
     const minValue = searchParams.get('minValue');
     const maxValue = searchParams.get('maxValue');
     const search = searchParams.get('search');
-
+    
     const where: any = {};
+    
+    // Add user filter based on role
+    const userFilter = await getUserFilter('read');
+    Object.assign(where, userFilter);
 
     // Filter by contact ID if provided
     if (contactId) {
@@ -81,21 +95,49 @@ export async function GET(request: NextRequest) {
 // POST /api/deals - Create new deal
 export async function POST(request: NextRequest) {
   try {
+    // Check create permission
+    const permissionCheck = await requirePermission('deal', 'create');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = dealSchema.parse(body);
-
+    
     // Verify contact exists
     const contact = await prisma.contact.findUnique({
       where: { id: validatedData.contactId },
     });
-
+    
     if (!contact) {
       return NextResponse.json(
         { data: null, error: 'Contact not found' },
         { status: 404 }
       );
     }
-
+    
+    // Validate company assignment matches contact's company
+    if (contact.companyId && validatedData.companyId && contact.companyId !== validatedData.companyId) {
+      return NextResponse.json(
+        { data: null, error: 'Company must match the contact\'s company' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate user assignment matches contact's user
+    if (contact.userId && validatedData.userId && contact.userId !== validatedData.userId) {
+      return NextResponse.json(
+        { data: null, error: 'Assigned user must match the contact\'s assigned user' },
+        { status: 400 }
+      );
+    }
+    
+    // Get current user ID
+    const userId = await getCurrentUserId();
+    
     // Auto-set stage when status changes
     let stage = validatedData.stage;
     if (validatedData.status === 'won') {
@@ -118,6 +160,7 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         contactId: validatedData.contactId,
         companyId: validatedData.companyId || null,
+        userId: validatedData.userId || userId,
       },
       include: {
         contact: {

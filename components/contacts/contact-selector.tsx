@@ -22,6 +22,7 @@ import type { Contact } from '@/types/contact';
 interface ContactSelectorProps {
   value?: string;
   onChange: (contactId: string) => void;
+  onContactSelect?: (contact: Contact) => void;
   disabled?: boolean;
   error?: string;
 }
@@ -29,6 +30,7 @@ interface ContactSelectorProps {
 export function ContactSelector({
   value,
   onChange,
+  onContactSelect,
   disabled = false,
   error,
 }: ContactSelectorProps) {
@@ -75,6 +77,13 @@ export function ContactSelector({
 
   const handleSelect = (contactId: string) => {
     onChange(contactId);
+    // Call onContactSelect callback with full contact object if provided
+    if (onContactSelect) {
+      const selectedContact = contacts.find((c) => c.id === contactId);
+      if (selectedContact) {
+        onContactSelect(selectedContact);
+      }
+    }
     setOpen(false);
     setSearchQuery('');
   };

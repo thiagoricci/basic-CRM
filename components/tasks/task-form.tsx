@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { taskSchema, type TaskInput } from '@/lib/validations';
 import { ContactSelector } from '@/components/contacts/contact-selector';
+import { UserSelector } from '@/components/users/user-selector';
 
 interface TaskFormProps {
   onSubmit: (data: TaskInput) => Promise<void>;
@@ -31,18 +32,52 @@ export function TaskForm({
   isSubmitting = false,
 }: TaskFormProps) {
   const [internalIsSubmitting, setInternalIsSubmitting] = useState(false);
+  const [userDisabled, setUserDisabled] = useState(false);
   const effectiveIsSubmitting = isSubmitting || internalIsSubmitting;
 
-  const form = useForm<TaskInput>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: initialData?.title || '',
-      description: initialData?.description || '',
-      dueDate: initialData?.dueDate || new Date().toISOString(),
-      priority: initialData?.priority || 'medium',
-      contactId: initialData?.contactId || '',
-    },
-  });
+const form = useForm<TaskInput>({
+  resolver: zodResolver(taskSchema),
+  defaultValues: {
+    title: initialData?.title || '',
+    description: initialData?.description || '',
+    dueDate: initialData?.dueDate || new Date().toISOString(),
+    priority: initialData?.priority || 'medium',
+    contactId: initialData?.contactId || '',
+    userId: initialData?.userId || undefined,
+  },
+});
+
+// Update form when initialData changes (e.g., when switching to edit mode)
+useEffect(() => {
+  if (initialData) {
+    form.reset({
+      title: initialData.title,
+      description: initialData.description || '',
+      dueDate: initialData.dueDate,
+      priority: initialData.priority,
+      contactId: initialData.contactId,
+      userId: initialData.userId ?? undefined,
+    });
+    
+    // Disable user field if contact has a user assigned
+    if (initialData.contactId && !initialData.userId) {
+      setUserDisabled(true);
+    } else {
+      setUserDisabled(false);
+    }
+  }
+}, [initialData, form]);
+
+// Handle contact selection to auto-fill user
+const handleContactSelect = (contact: any) => {
+  // Auto-fill user if contact has one
+  if (contact.userId) {
+    form.setValue('userId', contact.userId);
+    setUserDisabled(true);
+  } else {
+    setUserDisabled(false);
+  }
+};
 
   const handleSubmit = async (data: TaskInput) => {
     setInternalIsSubmitting(true);
@@ -158,10 +193,27 @@ export function TaskForm({
           <ContactSelector
             value={form.watch('contactId')}
             onChange={(value) => form.setValue('contactId', value)}
+            onContactSelect={handleContactSelect}
+            error={form.formState.errors.contactId?.message}
           />
           {form.formState.errors.contactId && (
             <p className="text-sm text-destructive">
               {form.formState.errors.contactId.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="userId">Assigned To</Label>
+          <UserSelector
+            value={form.watch('userId') || undefined}
+            onChange={(value) => form.setValue('userId', value as any)}
+            disabled={userDisabled}
+            placeholder={userDisabled ? 'Auto-filled from contact' : 'Assign to a user (optional)'}
+          />
+          {form.formState.errors.userId && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.userId.message}
             </p>
           )}
         </div>

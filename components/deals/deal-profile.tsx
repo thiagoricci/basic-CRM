@@ -122,7 +122,8 @@ export function DealProfile({ deal }: DealProfileProps) {
     probability: currentDeal.probability || 0,
     description: currentDeal.description || '',
     contactId: currentDeal.contactId,
-    companyId: currentDeal.companyId || '',
+    companyId: currentDeal.companyId ?? undefined,
+    userId: currentDeal.userId ?? undefined,
   };
 
   if (isEditing) {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AppNavigation } from '@/components/layout/app-navigation';
+import { SessionProvider } from 'next-auth/react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.variable}>
-        <AppNavigation>{children}</AppNavigation>
+        <SessionProvider>
+          <AppNavigation>{children}</AppNavigation>
+        </SessionProvider>
       </body>
     </html>
   );

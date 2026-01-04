@@ -2,9 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, LayoutDashboard, Menu, X, FileText, CheckSquare, Briefcase, Building2, BarChart } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import { Users, LayoutDashboard, Menu, X, FileText, CheckSquare, Briefcase, Building2, BarChart, LogIn, LogOut, User, ChevronDown, Settings, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { GlobalSearchBar } from '@/components/search/global-search-bar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -14,12 +25,21 @@ const navItems = [
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/activities', label: 'Activities', icon: FileText },
   { href: '/reports', label: 'Reports', icon: BarChart },
+  
+];
 
+const adminNavItems = [
+  { href: '/admin/users', label: 'User Management', icon: Shield },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/auth/signin' });
+  };
 
   return (
     <>
@@ -38,7 +58,7 @@ export function Navigation() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-
+            
             return (
               <div key={item.href}>
                 <Link
@@ -59,15 +79,89 @@ export function Navigation() {
               </div>
             );
           })}
+          
+          {/* Admin Navigation Items */}
+          {session?.user?.role === 'admin' && (
+            <>
+              <div className="border-t my-2"></div>
+              {adminNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                
+                return (
+                  <div key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-primary text-primary-foreground shadow-lg'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5 transition-transform duration-200', isActive ? 'scale-110' : 'group-hover:scale-110')} />
+                      <span>{item.label}</span>
+                      {isActive && (
+                        <div className="absolute right-2 h-2 w-2 rounded-full bg-primary-foreground" />
+                      )}
+                    </Link>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </nav>
 
-        {/* Bottom Section */}
+        {/* Global Search */}
         <div className="border-t p-4">
-          <div className="rounded-lg bg-muted/50 p-3">
-            <p className="text-xs text-muted-foreground">
-              Contact Manager v1.0
-            </p>
-          </div>
+          <GlobalSearchBar />
+        </div>
+
+        {/* User Section */}
+        <div className="border-t p-4">
+          {session ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-accent transition-colors">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {session.user.name?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium">{session.user.name}</p>
+                    <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <p className="text-sm font-medium">{session.user.name}</p>
+                  <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href="/auth/signin">
+              <button className="flex w-full items-center gap-3 rounded-lg p-3 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                <LogIn className="h-5 w-5" />
+                <span className="text-sm font-medium">Sign In</span>
+              </button>
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -123,7 +217,30 @@ export function Navigation() {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-
+                
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+              
+              {/* Admin Navigation Items */}
+              {session?.user?.role === 'admin' && adminNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                
                 return (
                   <Link
                     key={item.href}
@@ -143,13 +260,42 @@ export function Navigation() {
               })}
             </nav>
 
-            {/* Mobile Bottom Section */}
+            {/* Mobile Global Search */}
             <div className="border-t p-4">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <p className="text-xs text-muted-foreground">
-                  Contact Manager v1.0
-                </p>
-              </div>
+              <GlobalSearchBar />
+            </div>
+
+            {/* Mobile User Section */}
+            <div className="border-t p-4">
+              {session ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 rounded-lg p-3 bg-muted/50">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {session.user.name?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{session.user.name}</p>
+                      <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-3 rounded-lg p-3 text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className="text-sm font-medium">Sign Out</span>
+                  </button>
+                </div>
+              ) : (
+                <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                  <button className="flex w-full items-center gap-3 rounded-lg p-3 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <LogIn className="h-5 w-5" />
+                    <span className="text-sm font-medium">Sign In</span>
+                  </button>
+                </Link>
+              )}
             </div>
           </aside>
         </>

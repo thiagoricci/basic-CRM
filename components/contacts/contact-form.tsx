@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CompanySelector } from '@/components/companies/company-selector';
+import { UserSelector } from '@/components/users/user-selector';
 import { contactSchema, type ContactInput } from '@/lib/validations';
 
 interface ContactFormProps {
@@ -62,8 +63,25 @@ export function ContactForm({
       status: initialData?.status || 'lead',
       jobTitle: initialData?.jobTitle || '',
       companyId: initialData?.companyId || '',
+      userId: initialData?.userId || undefined,
     },
   });
+
+  // Update form when initialData changes (e.g., when switching to edit mode)
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        firstName: initialData.firstName || '',
+        lastName: initialData.lastName || '',
+        email: initialData.email,
+        phoneNumber: initialData.phoneNumber || '',
+        status: initialData.status,
+        jobTitle: initialData.jobTitle || '',
+        companyId: initialData.companyId ?? undefined,
+        userId: initialData.userId ?? undefined,
+      });
+    }
+  }, [initialData, form]);
 
   const handleSubmit = async (data: ContactInput) => {
     setError(null);
@@ -195,8 +213,8 @@ export function ContactForm({
       </div>
 
       <CompanySelector
-        value={form.watch('companyId')}
-        onChange={(value) => form.setValue('companyId', value)}
+        value={form.watch('companyId') || undefined}
+        onChange={(value) => form.setValue('companyId', value as any)}
         companies={companies}
         loading={companiesLoading}
         placeholder="Select a company (optional)"
@@ -206,6 +224,20 @@ export function ContactForm({
           {form.formState.errors.companyId.message}
         </p>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="userId">Assigned To</Label>
+        <UserSelector
+          value={form.watch('userId') || undefined}
+          onChange={(value) => form.setValue('userId', value as any)}
+          placeholder="Assign to a user (optional)"
+        />
+        {form.formState.errors.userId && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.userId.message}
+          </p>
+        )}
+      </div>
 
       {error && (
         <div className="rounded-lg bg-destructive/10 p-4 text-destructive">

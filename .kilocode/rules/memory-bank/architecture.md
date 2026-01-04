@@ -12,8 +12,14 @@ The CRM Contact Manager follows a modern full-stack web application architecture
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
+│                Authentication Layer (Phase 1-4)               │
+│  (NextAuth.js - Sessions, 2FA, Rate Limiting, RBAC)       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
 │                   API Layer (Server)                        │
-│  (Next.js API Routes - /api/contacts/*, /api/activities/*, /api/tasks/*, /api/deals/*, /api/companies/*) │
+│  (Next.js API Routes - /api/contacts/*, /api/activities/*, /api/tasks/*, /api/deals/*, /api/companies/*, /api/auth/*) │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -25,7 +31,7 @@ The CRM Contact Manager follows a modern full-stack web application architecture
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   Database Layer                            │
-│  (PostgreSQL - contacts, activities, tasks & deals tables)  │
+│  (PostgreSQL - contacts, activities, tasks, deals, companies, users, sessions, accounts tables)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -34,8 +40,31 @@ The CRM Contact Manager follows a modern full-stack web application architecture
 ```
 basic-CRM/
 ├── app/
-│   ├── layout.tsx              # Root layout with navigation
+│   ├── layout.tsx              # Root layout with navigation and SessionProvider
 │   ├── page.tsx                 # Dashboard page (home)
+│   ├── auth/                    # Authentication pages
+│   │   ├── layout.tsx           # Auth page layout
+│   │   ├── signin/
+│   │   │   └── page.tsx       # Sign-in page
+│   │   ├── signup/
+│   │   │   └── page.tsx       # Sign-up page
+│   │   ├── forgot-password/
+│   │   │   └── page.tsx       # Forgot password page
+│   │   ├── reset-password/
+│   │   │   └── page.tsx       # Reset password page
+│   │   ├── verify-email/
+│   │   │   └── page.tsx       # Email verification page
+│   │   ├── 2fa-setup/
+│   │   │   └── page.tsx       # 2FA setup page
+│   │   └── verify-2fa/
+│   │       └── page.tsx       # 2FA verification page
+│   ├── admin/                   # Admin pages (Phase 4)
+│   │   └── users/
+│   │       ├── page.tsx         # Users list page
+│   │       ├── [id]/
+│   │       │   └── page.tsx     # User profile page
+│   │       └── new/
+│   │           └── page.tsx     # New user creation page
 │   ├── contacts/
 │   │   ├── page.tsx             # Contacts list page
 │   │   ├── [id]/
@@ -61,6 +90,37 @@ basic-CRM/
 │   │   └── new/
 │   │       └── page.tsx         # New company page
 │   └── api/
+│       ├── auth/                  # Authentication API routes (Phase 1-3)
+│       │   ├── [...nextauth]/
+│       │   │   └── route.ts     # NextAuth.js handler
+│       │   ├── signin/
+│       │   │   └── route.ts     # Sign-in endpoint
+│       │   ├── signup/
+│       │   │   └── route.ts     # Sign-up endpoint
+│       │   ├── forgot-password/
+│       │   │   └── route.ts     # Forgot password endpoint
+│       │   ├── reset-password/
+│       │   │   └── route.ts     # Reset password endpoint
+│       │   ├── verify-email/
+│       │   │   └── route.ts     # Email verification endpoint
+│       │   ├── resend-verification/
+│       │   │   └── route.ts     # Resend verification endpoint
+│       │   └── 2fa/
+│       │       ├── enable/
+│       │       │   └── route.ts   # Enable 2FA endpoint
+│       │       ├── verify-setup/
+│       │       │   └── route.ts   # Verify 2FA setup endpoint
+│       │       ├── verify/
+│       │       │   └── route.ts   # Verify 2FA during sign-in endpoint
+│       │       ├── disable/
+│       │       │   └── route.ts   # Disable 2FA endpoint
+│       │       └── regenerate-codes/
+│       │           └── route.ts   # Regenerate backup codes endpoint
+│       ├── admin/                 # Admin API routes (Phase 4)
+│       │   └── users/
+│       │       ├── route.ts       # Users list and create API
+│       │       └── [id]/
+│       │           └── route.ts   # User get, update, delete API
 │       ├── dashboard/
 │       │   └── route.ts         # GET (analytics & recent data)
 │       ├── contacts/
@@ -138,12 +198,22 @@ basic-CRM/
 │       └── navigation.tsx       # Main navigation component
 ├── lib/
 │   ├── prisma.ts                # Prisma client instance
+│   ├── auth.config.ts           # NextAuth.js configuration
+│   ├── auth.ts                 # Auth helper functions
+│   ├── authorization.ts         # Authorization helper functions (Phase 4)
 │   ├── validations.ts           # Validation schemas
+│   ├── csv-export.ts           # CSV export utility (Reports)
 │   └── utils.ts                # Utility functions
 ├── types/
 │   ├── contact.ts               # Contact TypeScript interfaces
 │   ├── activity.ts             # Activity TypeScript interfaces
-│   └── task.ts                # Task TypeScript interfaces
+│   ├── task.ts                # Task TypeScript interfaces
+│   ├── deal.ts                # Deal TypeScript interfaces
+│   ├── company.ts             # Company TypeScript interfaces
+│   ├── user.ts                # User TypeScript interfaces
+│   ├── auth.ts                # Auth TypeScript interfaces
+│   ├── permissions.ts          # Permission types and helper functions (Phase 4)
+│   └── reports.ts             # Reports TypeScript interfaces
 ├── docs/
 │   └── API_DOCUMENTATION.md     # API documentation
 ├── prisma/
@@ -232,6 +302,8 @@ User Action → Component → API Route → Database Query → Response → Comp
 
 - **Server State**: Managed by Next.js server components and API routes
 - **Client State**: React useState/useReducer for form state, selection state
+- **Authentication State**: Managed by NextAuth.js sessions with SessionProvider
+- **Authorization State**: Managed by permission checks on API routes and ProtectedRoute components
 - **Data Fetching**: Next.js fetch API with revalidation for real-time updates
 - **Client Data Management**: SWR for efficient data fetching and caching (tasks, deals)
 - **Client-side Filtering**: Filter data locally after initial fetch to eliminate tab blinking
@@ -350,6 +422,77 @@ User Action → Component → API Route → Database Query → Response → Comp
 ## Database Schema
 
 ```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'rep' CHECK (role IN ('admin', 'manager', 'rep')),
+  avatar VARCHAR(500),
+  bio TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  email_verified TIMESTAMP,
+  two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  two_factor_secret VARCHAR(255),
+  last_sign_in_ip VARCHAR(45),
+  last_sign_in_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE accounts (
+  id VARCHAR(255) PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
+  provider VARCHAR(50) NOT NULL,
+  provider_account_id VARCHAR(255) NOT NULL,
+  refresh_token TEXT,
+  access_token TEXT,
+  expires_at INTEGER,
+  token_type VARCHAR(50),
+  scope TEXT,
+  id_token TEXT,
+  session_state VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE sessions (
+  id VARCHAR(255) PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires TIMESTAMP NOT NULL,
+  session_token VARCHAR(255) NOT NULL UNIQUE,
+  access_token VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE verification_tokens (
+  identifier VARCHAR(255) NOT NULL,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  expires TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (identifier, token)
+);
+
+CREATE TABLE sign_in_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  success BOOLEAN NOT NULL,
+  failure_reason VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE two_factor_backup_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code VARCHAR(10) NOT NULL UNIQUE,
+  used BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE contacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   first_name VARCHAR(50) NOT NULL,
@@ -357,6 +500,9 @@ CREATE TABLE contacts (
   email VARCHAR(255) NOT NULL UNIQUE,
   phone_number VARCHAR(20) UNIQUE,
   status VARCHAR(20) NOT NULL DEFAULT 'lead' CHECK (status IN ('lead', 'customer')),
+  job_title VARCHAR(100),
+  company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -413,19 +559,26 @@ CREATE TABLE companies (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_is_active ON users(is_active);
 CREATE INDEX idx_contacts_email ON contacts(email);
 CREATE INDEX idx_contacts_status ON contacts(status);
 CREATE INDEX idx_contacts_created_at ON contacts(created_at);
 CREATE INDEX idx_contacts_phone_number ON contacts(phone_number);
 CREATE INDEX idx_contacts_company_id ON contacts(company_id);
+CREATE INDEX idx_contacts_user_id ON contacts(user_id);
 CREATE INDEX idx_activities_contact_id ON activities(contact_id);
+CREATE INDEX idx_activities_user_id ON activities(user_id);
 CREATE INDEX idx_activities_created_at ON activities(created_at);
 CREATE INDEX idx_activities_type ON activities(type);
 CREATE INDEX idx_tasks_contact_id ON tasks(contact_id);
+CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_due_date ON tasks(due_date);
 CREATE INDEX idx_tasks_completed ON tasks(completed);
 CREATE INDEX idx_tasks_priority ON tasks(priority);
 CREATE INDEX idx_deals_contact_id ON deals(contact_id);
+CREATE INDEX idx_deals_user_id ON deals(user_id);
 CREATE INDEX idx_deals_company_id ON deals(company_id);
 CREATE INDEX idx_deals_stage ON deals(stage);
 CREATE INDEX idx_deals_status ON deals(status);
@@ -433,6 +586,10 @@ CREATE INDEX idx_deals_expected_close_date ON deals(expected_close_date);
 CREATE INDEX idx_deals_actual_close_date ON deals(actual_close_date);
 CREATE INDEX idx_companies_name ON companies(name);
 CREATE INDEX idx_companies_industry ON companies(industry);
+CREATE INDEX idx_sign_in_history_user_id ON sign_in_history(user_id);
+CREATE INDEX idx_sign_in_history_created_at ON sign_in_history(created_at);
+CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
+CREATE INDEX idx_two_factor_backup_codes_user_id ON two_factor_backup_codes(user_id);
 ```
 
 ## Performance Considerations
@@ -463,12 +620,29 @@ CREATE INDEX idx_companies_industry ON companies(industry);
 - Trust-based model suitable for small teams
 - Clear communication about data access
 
-### Future Phase (With Authentication)
+### Phase 1-4 (Authentication & Authorization Implemented)
 
-- Implement JWT-based authentication
-- Role-based access control
-- Contact ownership/assignment
-- Activity logging
+- JWT-based sessions with secure cookies
+- Password hashing with bcrypt (10 rounds)
+- Email verification with Resend integration
+- TOTP-based 2FA with backup codes
+- Rate limiting with Upstash Redis (graceful fallback)
+- Sign-in history and IP tracking
+- Suspicious activity detection
+- Role-based access control (RBAC)
+- User ownership checks for all records
+- Permission-based API route protection
+- Admin-only user management interface
+- Cascade deletion for user data
+
+### Future Phase (Phase 5 - Enhanced Security)
+
+- Social login (OAuth providers: Google, GitHub, etc.)
+- IP intelligence and geolocation
+- CAPTCHA integration
+- Device fingerprinting
+- Automatic account locking for suspicious activity
+- Audit logging for permission denials
 
 ## Scalability Path
 

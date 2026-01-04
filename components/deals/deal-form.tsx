@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CompanySelector } from '@/components/companies/company-selector';
+import { UserSelector } from '@/components/users/user-selector';
+import { ContactSelector } from '@/components/contacts/contact-selector';
 import { dealSchema, type DealInput } from '@/lib/validations';
 
 interface DealFormProps {
@@ -36,9 +38,10 @@ export function DealForm({
 }: DealFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [contacts, setContacts] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [companyDisabled, setCompanyDisabled] = useState(false);
+  const [userDisabled, setUserDisabled] = useState(false);
 
   useEffect(() => {
     // Fetch companies for dropdown
@@ -51,18 +54,6 @@ export function DealForm({
       })
       .catch((err) => console.error('Failed to fetch companies:', err))
       .finally(() => setCompaniesLoading(false));
-  }, []);
-
-  useEffect(() => {
-    // Fetch contacts for dropdown
-    fetch('/api/contacts')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.data) {
-          setContacts(data.data);
-        }
-      })
-      .catch((err) => console.error('Failed to fetch contacts:', err));
   }, []);
 
   const form = useForm<DealInput>({
@@ -78,8 +69,60 @@ export function DealForm({
       description: initialData?.description || '',
       contactId: initialData?.contactId || '',
       companyId: initialData?.companyId || '',
+      userId: initialData?.userId || undefined,
     },
   });
+
+  // Update form when initialData changes (e.g., when switching to edit mode)
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        name: initialData.name,
+        value: initialData.value,
+        stage: initialData.stage,
+        expectedCloseDate: initialData.expectedCloseDate,
+        actualCloseDate: initialData.actualCloseDate,
+        status: initialData.status,
+        probability: initialData.probability,
+        description: initialData.description,
+        contactId: initialData.contactId,
+        companyId: initialData.companyId ?? undefined,
+        userId: initialData.userId ?? undefined,
+      });
+      
+      // Disable company and user fields if contact has them assigned
+      if (initialData.contactId && !initialData.companyId) {
+        setCompanyDisabled(true);
+      } else {
+        setCompanyDisabled(false);
+      }
+      
+      if (initialData.contactId && !initialData.userId) {
+        setUserDisabled(true);
+      } else {
+        setUserDisabled(false);
+      }
+    }
+  }, [initialData, form]);
+
+  // Handle contact selection to auto-fill company and user
+  const handleContactSelect = (contact: any) => {
+    // Auto-fill company if contact has one
+    if (contact.companyId) {
+      form.setValue('companyId', contact.companyId);
+      setCompanyDisabled(true);
+    } else {
+      setCompanyDisabled(false);
+    }
+    
+    // Auto-fill user if contact has one
+    if (contact.userId) {
+      form.setValue('userId', contact.userId);
+      setUserDisabled(true);
+    } else {
+      setUserDisabled(false);
+    }
+  };
 
   const handleSubmit = async (data: DealInput) => {
     setError(null);
@@ -259,41 +302,43 @@ export function DealForm({
         <Label htmlFor="contactId" variant="required">
           Contact
         </Label>
-        <Select
-          defaultValue={form.getValues('contactId')}
-          onValueChange={(value) => form.setValue('contactId', value)}
+        <ContactSelector
+          value={form.watch('contactId')}
+          onChange={(value) => form.setValue('contactId', value)}
+          onContactSelect={handleContactSelect}
           disabled={isSubmitting}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a contact" />
-          </SelectTrigger>
-          <SelectContent>
-            {contacts.map((contact) => (
-              <SelectItem key={contact.id} value={contact.id}>
-                {contact.firstName} {contact.lastName} - {contact.email}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.contactId && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.contactId.message}
-          </p>
-        )}
+          error={form.formState.errors.contactId?.message}
+        />
       </div>
 
       <CompanySelector
-        value={form.watch('companyId')}
-        onChange={(value) => form.setValue('companyId', value)}
+        value={form.watch('companyId') || undefined}
+        onChange={(value) => form.setValue('companyId', value as any)}
         companies={companies}
         loading={companiesLoading}
-        placeholder="Select a company (optional)"
+        disabled={companyDisabled}
+        placeholder={companyDisabled ? 'Auto-filled from contact' : 'Select a company (optional)'}
       />
       {form.formState.errors.companyId && (
         <p className="text-sm text-destructive">
           {form.formState.errors.companyId.message}
         </p>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="userId">Assigned To</Label>
+        <UserSelector
+          value={form.watch('userId') || undefined}
+          onChange={(value) => form.setValue('userId', value as any)}
+          disabled={userDisabled}
+          placeholder={userDisabled ? 'Auto-filled from contact' : 'Assign to a user (optional)'}
+        />
+        {form.formState.errors.userId && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.userId.message}
+          </p>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>

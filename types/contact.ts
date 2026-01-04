@@ -1,4 +1,5 @@
 import type { Company } from './company';
+import type { User } from './user';
 
 export interface Contact {
   id: string;
@@ -10,6 +11,8 @@ export interface Contact {
   jobTitle?: string | null;
   companyId?: string | null;
   company?: Company;
+  userId?: string | null;
+  user?: User | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +24,8 @@ export interface ContactInput {
   phoneNumber?: string;
   status: 'lead' | 'customer';
   jobTitle?: string;
-  companyId?: string;
+  companyId?: string | null;
+  userId?: string | null;
 }
 
 export type ContactStatus = 'lead' | 'customer';

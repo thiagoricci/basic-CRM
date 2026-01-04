@@ -1,4 +1,5 @@
 import type { Company } from './company';
+import type { User } from './user';
 
 export interface Deal {
   id: string;
@@ -11,9 +12,11 @@ export interface Deal {
   probability: number | null;
   description: string | null;
   contactId: string;
+  userId?: string | null;
   contact?: Contact;
   companyId?: string | null;
   company?: Company;
+  user?: User | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,7 +31,8 @@ export interface DealInput {
   probability?: number;
   description?: string;
   contactId: string;
-  companyId?: string;
+  companyId?: string | null;
+  userId?: string | null;
 }
 
 export type DealStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';

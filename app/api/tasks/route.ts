@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { taskSchema } from '@/lib/validations';
+import { requirePermission, getUserFilter, getCurrentUserId } from '@/lib/authorization';
 
 // GET /api/tasks - List tasks with filtering
 export async function GET(request: NextRequest) {
   try {
+    // Check read permission
+    const permissionCheck = await requirePermission('task', 'read');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'all';
     const priority = searchParams.get('priority') || 'all';
@@ -12,8 +22,12 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const search = searchParams.get('search');
     const contactId = searchParams.get('contactId');
-
+    
     const where: any = {};
+    
+    // Add user filter based on role
+    const userFilter = await getUserFilter('read');
+    Object.assign(where, userFilter);
 
     // Filter by contact ID
     if (contactId) {
@@ -84,24 +98,44 @@ export async function GET(request: NextRequest) {
 // POST /api/tasks - Create new task
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check create permission
+    const permissionCheck = await requirePermission('task', 'create');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
 
+    const body = await request.json();
+    
     // Validate input
     const validatedData = taskSchema.parse(body);
-
+    
     // Verify contact exists
     const contact = await prisma.contact.findUnique({
       where: { id: validatedData.contactId },
     });
-
+    
     if (!contact) {
       return NextResponse.json(
         { data: null, error: 'Contact not found' },
         { status: 404 }
       );
     }
-
-    // Create task
+    
+    // Validate user assignment matches contact's user
+    if (contact.userId && validatedData.userId && contact.userId !== validatedData.userId) {
+      return NextResponse.json(
+        { data: null, error: 'Assigned user must match the contact\'s assigned user' },
+        { status: 400 }
+      );
+    }
+    
+    // Get current user ID
+    const userId = await getCurrentUserId();
+    
+    // Create task with user assignment
     const task = await prisma.task.create({
       data: {
         title: validatedData.title,
@@ -109,6 +143,7 @@ export async function POST(request: NextRequest) {
         dueDate: new Date(validatedData.dueDate),
         priority: validatedData.priority,
         contactId: validatedData.contactId,
+        userId: validatedData.userId || userId,
       },
       include: {
         contact: {

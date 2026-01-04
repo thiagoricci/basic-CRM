@@ -1,5 +1,29 @@
 import { z } from 'zod';
 
+export const userSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be less than 100 characters'),
+  email: z
+    .string()
+    .email('Invalid email format'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(100, 'Password must be less than 100 characters'),
+  role: z.enum(['admin', 'manager', 'rep'], {
+    required_error: 'Role is required',
+  }),
+  bio: z
+    .string()
+    .max(500, 'Bio must be less than 500 characters')
+    .optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UserInput = z.infer<typeof userSchema>;
+
 export const contactSchema = z.object({
   firstName: z
     .string()
@@ -23,11 +47,14 @@ export const contactSchema = z.object({
     .string()
     .max(100, 'Job title must be less than 100 characters')
     .optional(),
-  companyId: z
-    .string()
-    .uuid('Invalid company ID')
-    .optional()
-    .or(z.literal('')),
+  companyId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().uuid('Invalid company ID').optional().nullable()
+  ),
+  userId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().cuid('Invalid user ID').optional().nullable()
+  ),
 });
 
 export type ContactInput = z.infer<typeof contactSchema>;
@@ -45,6 +72,10 @@ export const activitySchema = z.object({
     .max(1000, 'Description must be less than 1000 characters')
     .optional(),
   contactId: z.string().uuid('Invalid contact ID'),
+  userId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().cuid('Invalid user ID').optional().nullable()
+  ),
 });
 
 export type ActivityInput = z.infer<typeof activitySchema>;
@@ -66,6 +97,10 @@ export const taskSchema = z.object({
     required_error: 'Priority is required',
   }),
   contactId: z.string().uuid('Invalid contact ID'),
+  userId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().cuid('Invalid user ID').optional().nullable()
+  ),
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;
@@ -139,11 +174,14 @@ export const dealSchema = z.object({
     .max(1000, 'Description must be less than 1000 characters')
     .optional(),
   contactId: z.string().uuid('Invalid contact ID'),
-  companyId: z
-    .string()
-    .uuid('Invalid company ID')
-    .optional()
-    .or(z.literal('')),
+  companyId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().uuid('Invalid company ID').optional().nullable()
+  ),
+  userId: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.string().cuid('Invalid user ID').optional().nullable()
+  ),
 });
 
 export type DealInput = z.infer<typeof dealSchema>;

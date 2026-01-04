@@ -22,12 +22,26 @@
 - **Database**: PostgreSQL
 - **ORM**: Prisma
 
+### Authentication (Phase 1-4)
+
+- **Framework**: NextAuth.js v5 (beta)
+- **Session Strategy**: JWT
+- **Providers**: Credentials (email/password), OAuth providers (for Phase 5)
+- **Password Hashing**: bcrypt (10 rounds)
+- **2FA**: TOTP-based with backup codes
+- **Email Service**: Resend (for email verification, password reset, 2FA codes)
+- **Rate Limiting**: Upstash Redis with graceful fallback
+- **IP Tracking**: Sign-in history logging
+- **Authorization**: Role-based access control (RBAC)
+
 ### Development Tools
 
 - **Package Manager**: npm or pnpm
 - **Code Quality**: ESLint, Prettier
 - **Type Checking**: TypeScript
 - **Version Control**: Git
+- **Email Service**: Resend (for authentication flows)
+- **Rate Limiting**: Upstash Redis (optional, graceful fallback if unavailable)
 
 ## Development Setup
 
@@ -67,9 +81,17 @@ Create `.env.local` file:
 # Database connection
 DATABASE_URL="postgresql://user:password@localhost:5432/crm_db"
 
-# Optional: Add in future phases
-# NEXTAUTH_SECRET="your-secret-key"
-# NEXTAUTH_URL="http://localhost:3000"
+# NextAuth.js configuration (required for authentication)
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Email service (Resend) - Required for email verification, password reset, 2FA
+RESEND_API_KEY="your-resend-api-key"
+RESEND_FROM_EMAIL="noreply@yourdomain.com"
+
+# Rate limiting (Upstash Redis) - Optional, graceful fallback if unavailable
+UPSTASH_REDIS_REST_URL="https://your-redis-instance.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your-redis-token"
 ```
 
 ### Database Setup
@@ -89,14 +111,16 @@ npx prisma generate
 
 ### MVP Constraints
 
-- No authentication/authorization (Phase 2)
-- Single database shared by all users
+- No authentication/authorization in initial MVP
+- Single database shared by all users (Phase 1-4: Multi-user with RBAC)
 - Client-side filtering for search (acceptable for MVP)
 - No real-time updates (polling acceptable)
 - No file uploads
 - Task completion requires manual checkbox click (no bulk completion)
 - Tasks are not automatically created from activities (manual creation only)
 - Deal stage updates require drag-and-drop on Kanban board
+- Email service requires Resend account setup (Phase 3)
+- Rate limiting requires Upstash Redis setup (Phase 3, optional with fallback)
 
 ### Performance Targets
 
@@ -147,7 +171,15 @@ npx prisma generate
     "@prisma/client": "^5.0.0",
     "framer-motion": "^10.16.0",
     "swr": "^2.2.0",
-    "@hello-pangea/dnd": "^16.5.0"
+    "@hello-pangea/dnd": "^16.5.0",
+    "next-auth@beta": "^5.0.0",
+    "bcrypt": "^5.1.0",
+    "@types/bcrypt": "^5.0.0",
+    "@auth/prisma-adapter": "^2.0.0",
+    "resend": "^3.0.0",
+    "qrcode": "^1.5.0",
+    "speakeasy": "^2.0.0",
+    "@upstash/redis": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -157,7 +189,9 @@ npx prisma generate
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
     "prettier": "^3.0.0",
-    "prettier-plugin-tailwindcss": "^0.5.0"
+    "prettier-plugin-tailwindcss": "^0.5.0",
+    "@types/qrcode": "^1.5.0",
+    "@types/speakeasy": "^2.0.0"
   }
 }
 ```

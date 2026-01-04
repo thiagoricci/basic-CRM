@@ -2,10 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { contactSchema } from '@/lib/validations';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { requirePermission, getUserFilter, getCurrentUserId } from '@/lib/authorization';
 
 export async function GET() {
   try {
+    // Check read permission
+    const permissionCheck = await requirePermission('contact', 'read');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
+    // Get user filter based on role
+    const userFilter = await getUserFilter('read');
+
     const contacts = await prisma.contact.findMany({
+      where: userFilter,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -21,11 +45,26 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check create permission
+    const permissionCheck = await requirePermission('contact', 'create');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
 
+    const body = await request.json();
+    
+    // Debug: log the received body
+    console.log('Received contact data:', JSON.stringify(body, null, 2));
+    console.log('userId value:', body.userId, 'Type:', typeof body.userId);
+    
     // Validate input
     const validatedData = contactSchema.parse(body);
-
+    
+    console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+    
     // Check for duplicate email
     const existingEmail = await prisma.contact.findUnique({
       where: { email: validatedData.email },
@@ -52,7 +91,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create contact
+    // Get current user ID
+    const userId = await getCurrentUserId();
+
+    // Create contact with user assignment
     const contact = await prisma.contact.create({
       data: {
         firstName: validatedData.firstName,
@@ -62,6 +104,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status,
         jobTitle: validatedData.jobTitle || null,
         companyId: validatedData.companyId || null,
+        userId: validatedData.userId || userId, // Use provided userId or current user
       },
     });
 

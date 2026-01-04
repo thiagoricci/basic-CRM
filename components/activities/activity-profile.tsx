@@ -90,6 +90,7 @@ export function ActivityProfile({ activity }: ActivityProfileProps) {
     subject: currentActivity.subject,
     description: currentActivity.description || '',
     contactId: currentActivity.contactId,
+    userId: currentActivity.userId ?? undefined,
   };
 
   if (isEditing) {

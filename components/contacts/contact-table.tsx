@@ -2,19 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, User } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Contact } from '@/types/contact';
 import { formatPhoneNumber } from '@/lib/utils';
+import { getRoleBadgeColor, getRoleName } from '@/types/permissions';
+import { useSession } from 'next-auth/react';
 
 interface ContactTableProps {
   contacts: Contact[];
   selectedContacts: string[];
   onSelectionChange: (selected: string[]) => void;
-  sortField: 'name' | 'email' | 'phone' | 'status' | 'date';
+  sortField: 'name' | 'email' | 'phone' | 'status' | 'date' | 'assignedTo';
   sortDirection: 'asc' | 'desc';
-  onSortChange: (field: 'name' | 'email' | 'phone' | 'status' | 'date') => void;
+  onSortChange: (field: 'name' | 'email' | 'phone' | 'status' | 'date' | 'assignedTo') => void;
 }
 
 export function ContactTable({
@@ -63,7 +65,7 @@ export function ContactTable({
           />
         </div>
         <div
-          className="col-span-3 flex items-center cursor-pointer hover:text-foreground transition-colors select-none"
+          className="col-span-2 flex items-center cursor-pointer hover:text-foreground transition-colors select-none"
           onClick={() => onSortChange('name')}
         >
           Name
@@ -84,7 +86,7 @@ export function ContactTable({
           <SortIcon field="phone" />
         </div>
         <div
-          className="col-span-2 flex items-center cursor-pointer hover:text-foreground transition-colors select-none"
+          className="col-span-1 flex items-center cursor-pointer hover:text-foreground transition-colors select-none"
           onClick={() => onSortChange('status')}
         >
           Status
@@ -96,6 +98,13 @@ export function ContactTable({
         >
           Created
           <SortIcon field="date" />
+        </div>
+        <div
+          className="col-span-2 flex items-center cursor-pointer hover:text-foreground transition-colors select-none"
+          onClick={() => onSortChange('assignedTo')}
+        >
+          Assigned
+          <SortIcon field="assignedTo" />
         </div>
       </div>
 
@@ -123,7 +132,7 @@ export function ContactTable({
               </div>
               <Link
                 href={`/contacts/${contact.id}`}
-                className="col-span-3 flex items-center font-medium hover:underline"
+                className="col-span-2 flex items-center font-medium hover:underline"
               >
                 {contact.firstName} {contact.lastName}
               </Link>
@@ -133,7 +142,7 @@ export function ContactTable({
               <div className="col-span-2 flex items-center text-muted-foreground">
                 {formatPhoneNumber(contact.phoneNumber) || '-'}
               </div>
-              <div className="col-span-2 flex items-center">
+              <div className="col-span-1 flex items-center">
                 <Badge
                   variant={contact.status === 'customer' ? 'default' : 'secondary'}
                 >
@@ -142,6 +151,18 @@ export function ContactTable({
               </div>
               <div className="col-span-1 flex items-center text-sm text-muted-foreground">
                 {new Date(contact.createdAt).toLocaleDateString()}
+              </div>
+              <div className="col-span-2 flex items-center">
+                {contact.user ? (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {contact.user.name}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground/50">-</span>
+                )}
               </div>
             </div>
           ))}

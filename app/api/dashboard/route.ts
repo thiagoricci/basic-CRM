@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAnalyticsAccess, getUserFilter } from '@/lib/authorization';
 
 export async function GET() {
   try {
+    // Check analytics access permission
+    const permissionCheck = await requireAnalyticsAccess();
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     // Calculate date ranges for activity and task metrics
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -14,6 +24,9 @@ export async function GET() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    // Get user filter based on role
+    const userFilter = await getUserFilter('read');
 
     // Fetch statistics and recent data using database aggregation for optimal performance
     const [
@@ -54,10 +67,11 @@ export async function GET() {
       companiesByIndustry,
       recentCompanies,
     ] = await Promise.all([
-      prisma.contact.count(),
-      prisma.contact.count({ where: { status: 'lead' } }),
-      prisma.contact.count({ where: { status: 'customer' } }),
+      prisma.contact.count({ where: userFilter.userId ? { userId: userFilter.userId } : {} }),
+      prisma.contact.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'lead' } }),
+      prisma.contact.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'customer' } }),
       prisma.contact.findMany({
+        where: userFilter.userId ? { userId: userFilter.userId } : {},
         select: {
           id: true,
           firstName: true,
@@ -70,6 +84,7 @@ export async function GET() {
         take: 5,
       }),
       prisma.activity.findMany({
+        where: userFilter.userId ? { userId: userFilter.userId } : {},
         select: {
           id: true,
           type: true,
@@ -90,6 +105,7 @@ export async function GET() {
       // Count tasks due today
       prisma.task.count({
         where: {
+          ...(userFilter.userId ? { userId: userFilter.userId } : {}),
           completed: false,
           dueDate: {
             gte: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -100,6 +116,7 @@ export async function GET() {
       // Get next 5 upcoming tasks
       prisma.task.findMany({
         where: {
+          ...(userFilter.userId ? { userId: userFilter.userId } : {}),
           completed: false,
         },
         select: {
@@ -123,7 +140,7 @@ export async function GET() {
       }),
       // Deal metrics
       prisma.deal.aggregate({
-        where: { status: 'open' },
+        where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'open' },
         _sum: { value: true },
       }),
       // Deals by stage
@@ -131,26 +148,27 @@ export async function GET() {
         by: ['stage'],
         _sum: { value: true },
         _count: true,
-        where: { status: 'open' },
+        where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'open' },
       }),
       // Won deals value
       prisma.deal.aggregate({
-        where: { status: 'won' },
+        where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'won' },
         _sum: { value: true },
       }),
       // Lost deals value
       prisma.deal.aggregate({
-        where: { status: 'lost' },
+        where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'lost' },
         _sum: { value: true },
       }),
       // Total won deals count
-      prisma.deal.count({ where: { status: 'won' } }),
+      prisma.deal.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'won' } }),
       // Total lost deals count
-      prisma.deal.count({ where: { status: 'lost' } }),
+      prisma.deal.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'lost' } }),
       // Open deals count
-      prisma.deal.count({ where: { status: 'open' } }),
+      prisma.deal.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), status: 'open' } }),
       // Recent deals
       prisma.deal.findMany({
+        where: userFilter.userId ? { userId: userFilter.userId } : {},
         select: {
           id: true,
           name: true,
@@ -171,13 +189,14 @@ export async function GET() {
         take: 5,
         }),
         // Activity metrics
-        prisma.activity.count(),
-        prisma.activity.count({ where: { type: 'call' } }),
-        prisma.activity.count({ where: { type: 'email' } }),
-        prisma.activity.count({ where: { type: 'meeting' } }),
-        prisma.activity.count({ where: { type: 'note' } }),
+        prisma.activity.count({ where: userFilter.userId ? { userId: userFilter.userId } : {} }),
+        prisma.activity.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), type: 'call' } }),
+        prisma.activity.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), type: 'email' } }),
+        prisma.activity.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), type: 'meeting' } }),
+        prisma.activity.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), type: 'note' } }),
         prisma.activity.count({
           where: {
+            ...(userFilter.userId ? { userId: userFilter.userId } : {}),
             createdAt: {
               gte: startOfWeek,
             },
@@ -185,15 +204,17 @@ export async function GET() {
         }),
         prisma.activity.count({
           where: {
+            ...(userFilter.userId ? { userId: userFilter.userId } : {}),
             createdAt: {
               gte: startOfMonth,
             },
           },
         }),
         // Task metrics
-        prisma.task.count(),
+        prisma.task.count({ where: userFilter.userId ? { userId: userFilter.userId } : {} }),
         prisma.task.count({
           where: {
+            ...(userFilter.userId ? { userId: userFilter.userId } : {}),
             completed: false,
             dueDate: {
               lt: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -201,13 +222,13 @@ export async function GET() {
           },
         }),
         prisma.task.count({
-          where: { completed: true },
+          where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), completed: true },
         }),
-        prisma.task.count({ where: { priority: 'low' } }),
-        prisma.task.count({ where: { priority: 'medium' } }),
-        prisma.task.count({ where: { priority: 'high' } }),
-        // Company metrics
-        prisma.company.count(),
+        prisma.task.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), priority: 'low' } }),
+        prisma.task.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), priority: 'medium' } }),
+        prisma.task.count({ where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), priority: 'high' } }),
+        // Company metrics (companies are shared resources, no user filtering)
+        prisma.company.count({ where: {} }),
         prisma.company.count({
           where: {
             deals: {
@@ -217,7 +238,7 @@ export async function GET() {
         }),
         // Fetch deals with company names for top companies chart
         prisma.deal.findMany({
-          where: { companyId: { not: null } },
+          where: { ...(userFilter.userId ? { userId: userFilter.userId } : {}), companyId: { not: null } },
           select: {
             companyId: true,
             value: true,
@@ -234,6 +255,7 @@ export async function GET() {
           _count: true,
         }),
         prisma.company.findMany({
+          where: {},
           select: {
             id: true,
             name: true,
@@ -400,6 +422,7 @@ export async function GET() {
     // Fetch task completion rate over time (last 30 days)
     const tasksCompletionData = await prisma.task.findMany({
       where: {
+        ...(userFilter.userId ? { userId: userFilter.userId } : {}),
         createdAt: {
           gte: thirtyDaysAgo,
         },

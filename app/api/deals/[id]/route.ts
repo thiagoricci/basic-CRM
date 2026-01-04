@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { dealSchema } from '@/lib/validations';
+import { requirePermission, canAccessRecord } from '@/lib/authorization';
 
 // GET /api/deals/[id] - Get single deal
 export async function GET(
@@ -8,6 +9,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check read permission
+    const permissionCheck = await requirePermission('deal', 'read');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const deal = await prisma.deal.findUnique({
       where: { id: params.id },
       include: {
@@ -37,6 +47,15 @@ export async function GET(
       );
     }
 
+    // Check if user can access this record
+    const accessCheck = await canAccessRecord('read', deal.userId);
+    if (!accessCheck.success) {
+      return NextResponse.json(
+        { data: null, error: accessCheck.error },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ data: deal, error: null });
   } catch (error) {
     console.error('Error fetching deal:', error);
@@ -53,14 +72,23 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check update permission
+    const permissionCheck = await requirePermission('deal', 'update');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = dealSchema.parse(body);
-
+    
     // Verify deal exists
     const existingDeal = await prisma.deal.findUnique({
       where: { id: params.id },
     });
-
+    
     if (!existingDeal) {
       return NextResponse.json(
         { data: null, error: 'Deal not found' },
@@ -68,15 +96,40 @@ export async function PUT(
       );
     }
 
+    // Check if user can access this record
+    const accessCheck = await canAccessRecord('update', existingDeal.userId);
+    if (!accessCheck.success) {
+      return NextResponse.json(
+        { data: null, error: accessCheck.error },
+        { status: 403 }
+      );
+    }
+    
     // Verify contact exists
     const contact = await prisma.contact.findUnique({
       where: { id: validatedData.contactId },
     });
-
+    
     if (!contact) {
       return NextResponse.json(
         { data: null, error: 'Contact not found' },
         { status: 404 }
+      );
+    }
+    
+    // Validate company assignment matches contact's company
+    if (contact.companyId && validatedData.companyId && contact.companyId !== validatedData.companyId) {
+      return NextResponse.json(
+        { data: null, error: 'Company must match the contact\'s company' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate user assignment matches contact's user
+    if (contact.userId && validatedData.userId && contact.userId !== validatedData.userId) {
+      return NextResponse.json(
+        { data: null, error: 'Assigned user must match the contact\'s assigned user' },
+        { status: 400 }
       );
     }
 
@@ -115,6 +168,7 @@ export async function PUT(
         description: validatedData.description,
         contactId: validatedData.contactId,
         companyId: validatedData.companyId || null,
+        userId: validatedData.userId || existingDeal.userId,
       },
       include: {
         contact: {
@@ -156,18 +210,36 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check update permission
+    const permissionCheck = await requirePermission('deal', 'update');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { stage, status } = body;
-
+    
     // Verify deal exists
     const existingDeal = await prisma.deal.findUnique({
       where: { id: params.id },
     });
-
+    
     if (!existingDeal) {
       return NextResponse.json(
         { data: null, error: 'Deal not found' },
         { status: 404 }
+      );
+    }
+
+    // Check if user can access this record
+    const accessCheck = await canAccessRecord('update', existingDeal.userId);
+    if (!accessCheck.success) {
+      return NextResponse.json(
+        { data: null, error: accessCheck.error },
+        { status: 403 }
       );
     }
 
@@ -238,10 +310,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check delete permission
+    const permissionCheck = await requirePermission('deal', 'delete');
+    if (!permissionCheck.success) {
+      return NextResponse.json(
+        { data: null, error: permissionCheck.error },
+        { status: 403 }
+      );
+    }
+
     const deal = await prisma.deal.findUnique({
       where: { id: params.id },
     });
-
+    
     if (!deal) {
       return NextResponse.json(
         { data: null, error: 'Deal not found' },
@@ -249,6 +330,15 @@ export async function DELETE(
       );
     }
 
+    // Check if user can access this record
+    const accessCheck = await canAccessRecord('delete', deal.userId);
+    if (!accessCheck.success) {
+      return NextResponse.json(
+        { data: null, error: accessCheck.error },
+        { status: 403 }
+      );
+    }
+    
     await prisma.deal.delete({
       where: { id: params.id },
     });

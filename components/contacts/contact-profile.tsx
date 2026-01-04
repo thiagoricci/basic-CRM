@@ -135,7 +135,8 @@ export function ContactProfile({ contact }: ContactProfileProps) {
     phoneNumber: currentContact.phoneNumber || '',
     status: currentContact.status,
     jobTitle: currentContact.jobTitle || '',
-    companyId: currentContact.companyId || '',
+    companyId: currentContact.companyId ?? undefined,
+    userId: currentContact.userId ?? undefined,
   };
 
   if (isEditing) {
