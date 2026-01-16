@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAnalyticsAccess, getUserFilter } from '@/lib/authorization';
+import { requireAuth } from '@/lib/auth';
+import { getUserFilter } from '@/lib/authorization';
 
 export async function GET() {
   try {
-    // Check analytics access permission
-    const permissionCheck = await requireAnalyticsAccess();
-    if (!permissionCheck.success) {
-      return NextResponse.json(
-        { data: null, error: permissionCheck.error },
-        { status: 403 }
-      );
-    }
+    // Ensure user is authenticated
+    await requireAuth();
 
     // Calculate date ranges for activity and task metrics
     const now = new Date();

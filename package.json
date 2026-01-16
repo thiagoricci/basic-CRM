@@ -19,6 +19,9 @@
     "test-signup": "ts-node scripts/test-signup-flow.ts",
     "migrate-rbac-records": "ts-node prisma/migrate-rbac-records.ts"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed-auth.ts"
+  },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@hello-pangea/dnd": "^16.6.0",
