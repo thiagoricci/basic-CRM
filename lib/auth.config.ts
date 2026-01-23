@@ -1,7 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import Credentials from 'next-auth/providers/credentials';
-import bcrypt from 'bcrypt';
 import type { UserRole } from '@/types/auth';
 
 declare module 'next-auth' {
@@ -66,6 +65,9 @@ export const authConfig: NextAuthConfig = {
           console.log('[Auth] Email not verified');
           return null;
         }
+
+        // Import bcrypt only on server side
+        const bcrypt = (await import('bcrypt')).default;
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,

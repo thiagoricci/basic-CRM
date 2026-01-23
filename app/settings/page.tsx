@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EmailVerificationStatus } from '@/components/auth/email-verification-status';
 import { ResendVerificationButton } from '@/components/auth/resend-verification-button';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/actions';
 import { Settings } from 'lucide-react';
 
 export default function SettingsPage() {
